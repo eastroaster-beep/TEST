@@ -1,0 +1,1620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive Brokers — Trade Everything. Pay Almost Nothing.</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    /* ─── CSS RESET & BASE ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue:       #1A56DB;
+      --navy:       #0D1B3E;
+      --navy-deep:  #070F24;
+      --amber:      #F4B942;
+      --gold:       #FFD700;
+      --white:      #FFFFFF;
+      --light-surf: #EBF3FF;
+      --green:      #00C875;
+      --red:        #FF4D4D;
+      --text-dark:  #0D1B3E;
+      --text-mid:   #3A4A6B;
+      --border:     rgba(26,86,219,0.15);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--white);
+      color: var(--text-dark);
+      overflow-x: hidden;
+    }
+    h1,h2,h3,h4,h5,h6 { font-family: 'Space Grotesk', sans-serif; }
+    a { text-decoration: none; color: inherit; }
+    img { max-width: 100%; }
+    ul { list-style: none; }
+
+    /* ─── SCROLLBAR ────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--navy); }
+    ::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 3px; }
+
+    /* ─── UTILITY CLASSES ──────────────────────────────────────────────── */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    .section-tag {
+      display: inline-block;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px; font-weight: 700; letter-spacing: 2.5px;
+      text-transform: uppercase; padding: 6px 16px;
+      border-radius: 100px;
+    }
+    .tag-gold { background: rgba(255,215,0,0.15); color: var(--gold); border: 1px solid rgba(255,215,0,0.4); }
+    .tag-blue { background: rgba(26,86,219,0.1); color: var(--blue); border: 1px solid rgba(26,86,219,0.3); }
+
+    /* ─── GRADIENT RULE ────────────────────────────────────────────────── */
+    .grad-rule {
+      width: 80px; height: 4px; border-radius: 2px;
+      background: linear-gradient(90deg, var(--blue), var(--gold));
+      margin: 16px 0 0 0;
+    }
+    .grad-rule.center { margin: 16px auto 0; }
+
+    /* ─── BUTTONS ──────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700; font-size: 15px; letter-spacing: 0.5px;
+      padding: 14px 32px; border-radius: 8px; border: none;
+      cursor: pointer; transition: all 0.25s ease; position: relative; overflow: hidden;
+    }
+    .btn::after {
+      content: ''; position: absolute; inset: 0;
+      background: rgba(255,255,255,0.1); opacity: 0; transition: opacity 0.2s;
+    }
+    .btn:hover::after { opacity: 1; }
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold) 0%, var(--amber) 100%);
+      color: var(--navy-deep);
+      box-shadow: 0 4px 24px rgba(255,215,0,0.4);
+    }
+    .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(255,215,0,0.55); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--white);
+      border: 2px solid rgba(255,255,255,0.4);
+    }
+    .btn-ghost:hover { border-color: var(--white); background: rgba(255,255,255,0.08); transform: translateY(-2px); }
+    .btn-blue {
+      background: var(--blue);
+      color: var(--white);
+      box-shadow: 0 4px 20px rgba(26,86,219,0.4);
+    }
+    .btn-blue:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(26,86,219,0.55); }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       1. HEADER
+    ══════════════════════════════════════════════════════════════════════ */
+    #header {
+      position: fixed; top: 0; left: 0; width: 100%; z-index: 1000;
+      background: rgba(7,15,36,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(26,86,219,0.25);
+      transition: background 0.3s;
+    }
+    .header-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 68px;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--blue), #0a2d7a);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-icon svg { width: 20px; height: 20px; fill: var(--gold); }
+    .logo-text { font-size: 14px; font-weight: 800; color: var(--white); line-height: 1.1; }
+    .logo-text span { color: var(--gold); }
+    .nav { display: flex; align-items: center; gap: 32px; }
+    .nav a {
+      font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.75);
+      transition: color 0.2s;
+    }
+    .nav a:hover { color: var(--white); }
+    .header-cta {
+      background: linear-gradient(135deg, var(--gold), var(--amber));
+      color: var(--navy-deep); font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
+      padding: 9px 22px; border-radius: 100px; border: none;
+      cursor: pointer; transition: all 0.25s;
+      box-shadow: 0 0 20px rgba(255,215,0,0.3);
+    }
+    .header-cta:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(255,215,0,0.5); }
+    .burger { display: none; flex-direction: column; gap: 5px; cursor: pointer; }
+    .burger span { display: block; width: 24px; height: 2px; background: var(--white); border-radius: 2px; transition: all 0.3s; }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       2. HERO
+    ══════════════════════════════════════════════════════════════════════ */
+    #hero {
+      min-height: 100vh;
+      background: var(--navy-deep);
+      position: relative; overflow: hidden;
+      display: flex; flex-direction: column;
+      padding-top: 68px;
+    }
+    /* Gradient mesh background */
+    .hero-bg {
+      position: absolute; inset: 0; pointer-events: none;
+    }
+    .hero-bg::before {
+      content: '';
+      position: absolute;
+      width: 700px; height: 700px;
+      top: -200px; right: -100px;
+      background: radial-gradient(ellipse, rgba(26,86,219,0.25) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: pulse 6s ease-in-out infinite;
+    }
+    .hero-bg::after {
+      content: '';
+      position: absolute;
+      width: 500px; height: 500px;
+      bottom: 100px; left: -100px;
+      background: radial-gradient(ellipse, rgba(255,215,0,0.08) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: pulse 8s ease-in-out infinite reverse;
+    }
+    @keyframes pulse {
+      0%,100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.7; }
+    }
+    /* Grid overlay */
+    .hero-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(26,86,219,0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(26,86,219,0.07) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+    .hero-content {
+      flex: 1; display: flex; align-items: center;
+      padding: 60px 0 40px;
+      position: relative; z-index: 1;
+    }
+    .hero-inner {
+      max-width: 1200px; margin: 0 auto; padding: 0 24px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
+    }
+    .hero-left {}
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3);
+      color: var(--gold); font-size: 12px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; padding: 7px 16px; border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero-tag .dot {
+      width: 7px; height: 7px; background: var(--gold);
+      border-radius: 50%; animation: blink 1.5s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .hero-h1 {
+      font-size: clamp(42px, 5.5vw, 72px);
+      font-weight: 900; line-height: 1.05; color: var(--white);
+      margin-bottom: 24px;
+    }
+    .hero-h1 .gold-word { color: var(--gold); position: relative; display: inline-block; }
+    .hero-h1 .gold-word::after {
+      content: ''; position: absolute; bottom: -4px; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--gold), var(--amber));
+      border-radius: 2px;
+    }
+    .hero-sub {
+      font-size: 18px; color: rgba(255,255,255,0.65); line-height: 1.7;
+      margin-bottom: 36px; max-width: 480px;
+    }
+    .hero-ctas { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 48px; }
+    .hero-stats {
+      display: flex; gap: 32px; flex-wrap: wrap;
+      padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .hero-stat { }
+    .hero-stat .num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 26px; font-weight: 900; color: var(--gold);
+    }
+    .hero-stat .label { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+
+    /* Chart / right side visual */
+    .hero-right { position: relative; }
+    .chart-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(26,86,219,0.3);
+      border-radius: 16px; padding: 24px;
+      backdrop-filter: blur(8px);
+      position: relative; overflow: hidden;
+    }
+    .chart-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--blue), var(--gold));
+    }
+    .chart-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 20px;
+    }
+    .chart-title { font-family: 'Space Grotesk', sans-serif; font-size: 13px; color: rgba(255,255,255,0.5); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+    .chart-price { font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 900; color: var(--white); }
+    .chart-change { font-size: 13px; font-weight: 700; color: var(--green); background: rgba(0,200,117,0.12); padding: 4px 10px; border-radius: 100px; }
+    /* SVG Chart */
+    .chart-svg-wrap { width: 100%; height: 140px; position: relative; }
+    .chart-svg-wrap svg { width: 100%; height: 100%; }
+    /* Mini tickers inside card */
+    .mini-tickers { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+    .mini-tick {
+      flex: 1; min-width: 80px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px; padding: 10px 12px;
+    }
+    .mini-tick .sym { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.5); }
+    .mini-tick .val { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 800; color: var(--white); margin-top: 2px; }
+    .mini-tick .chg { font-size: 11px; font-weight: 600; margin-top: 1px; }
+    .chg-up { color: var(--green); }
+    .chg-dn { color: var(--red); }
+    /* Floating badge */
+    .float-badge {
+      position: absolute; top: -20px; right: -20px;
+      background: linear-gradient(135deg, var(--gold), var(--amber));
+      color: var(--navy-deep); font-family: 'Space Grotesk', sans-serif;
+      font-size: 12px; font-weight: 800; padding: 8px 14px; border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(255,215,0,0.5);
+      white-space: nowrap;
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+    .float-badge2 {
+      position: absolute; bottom: -20px; left: -20px;
+      background: rgba(0,200,117,0.15); border: 1px solid var(--green);
+      color: var(--green); font-family: 'Space Grotesk', sans-serif;
+      font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 12px;
+      white-space: nowrap;
+      animation: float 4s ease-in-out infinite 1s;
+    }
+
+    /* Ticker tape */
+    .ticker-wrap {
+      background: rgba(26,86,219,0.12);
+      border-top: 1px solid rgba(26,86,219,0.3);
+      border-bottom: 1px solid rgba(26,86,219,0.3);
+      overflow: hidden; padding: 10px 0;
+      position: relative; z-index: 1;
+    }
+    .ticker-track {
+      display: flex; gap: 0;
+      animation: tickerScroll 30s linear infinite;
+      white-space: nowrap; width: max-content;
+    }
+    @keyframes tickerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .ticker-item {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 0 28px; font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8);
+    }
+    .ticker-item .t-sym { color: var(--white); font-weight: 800; }
+    .ticker-item .t-up { color: var(--green); }
+    .ticker-item .t-dn { color: var(--red); }
+    .ticker-sep { color: rgba(26,86,219,0.6); font-size: 18px; }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       3. PROBLEM SECTION
+    ══════════════════════════════════════════════════════════════════════ */
+    #problem {
+      background: var(--white);
+      padding: 100px 0;
+    }
+    .problem-header { text-align: center; margin-bottom: 64px; }
+    .problem-header h2 {
+      font-size: clamp(32px, 4vw, 48px); font-weight: 700;
+      color: var(--text-dark); margin-top: 16px; margin-bottom: 8px;
+    }
+    .problem-header h2 span { color: var(--red); }
+    .problem-header p { font-size: 17px; color: var(--text-mid); max-width: 520px; margin: 16px auto 0; }
+    .problem-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+    .prob-card {
+      border: 1.5px solid #f0e0e0;
+      border-radius: 16px; padding: 32px 28px;
+      background: #fff8f8;
+      position: relative; overflow: hidden;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .prob-card:hover { transform: translateY(-6px); box-shadow: 0 16px 40px rgba(255,77,77,0.1); }
+    .prob-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--red), #ff8a8a);
+    }
+    .prob-x {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(255,77,77,0.12); color: var(--red);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; margin-bottom: 20px;
+    }
+    .prob-card h3 { font-size: 19px; font-weight: 700; margin-bottom: 12px; }
+    .prob-card p { font-size: 15px; color: var(--text-mid); line-height: 1.65; }
+    .prob-stat {
+      margin-top: 20px; padding-top: 16px; border-top: 1px solid #f0e0e0;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 22px; font-weight: 900; color: var(--red);
+    }
+    .prob-stat span { font-size: 12px; font-weight: 500; color: var(--text-mid); display: block; margin-top: 2px; }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       4. SOLUTION — IB ADVANTAGE
+    ══════════════════════════════════════════════════════════════════════ */
+    #solution {
+      background: var(--light-surf);
+      padding: 100px 0;
+    }
+    .solution-header { text-align: center; margin-bottom: 64px; }
+    .solution-header h2 { font-size: clamp(32px, 4vw, 48px); font-weight: 700; margin-top: 16px; }
+    .solution-header h2 span { color: var(--blue); }
+    .solution-header p { font-size: 17px; color: var(--text-mid); max-width: 520px; margin: 16px auto 0; line-height: 1.7; }
+    .solution-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+    .sol-card {
+      background: var(--white); border-radius: 16px; padding: 36px 28px;
+      box-shadow: 0 4px 28px rgba(26,86,219,0.08);
+      position: relative; overflow: hidden;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .sol-card:hover { transform: translateY(-6px); box-shadow: 0 16px 48px rgba(26,86,219,0.15); }
+    .sol-accent {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+      background: linear-gradient(180deg, var(--blue), var(--gold));
+      border-radius: 4px 0 0 4px;
+    }
+    .sol-check {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--blue), #0a38a0);
+      color: var(--white); display: flex; align-items: center; justify-content: center;
+      font-size: 20px; margin-bottom: 20px;
+    }
+    .sol-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+    .sol-card p { font-size: 15px; color: var(--text-mid); line-height: 1.65; }
+    .sol-highlight {
+      margin-top: 20px; padding: 12px 16px;
+      background: rgba(255,215,0,0.1); border-left: 3px solid var(--gold);
+      border-radius: 0 8px 8px 0;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px; font-weight: 700; color: var(--navy);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       5. NUMBERS SECTION
+    ══════════════════════════════════════════════════════════════════════ */
+    #numbers {
+      background: var(--navy-deep);
+      padding: 100px 0;
+      position: relative; overflow: hidden;
+    }
+    #numbers::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 600px 400px at 10% 50%, rgba(26,86,219,0.2) 0%, transparent 60%),
+        radial-gradient(ellipse 500px 400px at 90% 50%, rgba(255,215,0,0.06) 0%, transparent 60%);
+    }
+    .numbers-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+      position: relative; z-index: 1;
+    }
+    .num-item {
+      text-align: center; padding: 40px 20px;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+    .num-item:last-child { border-right: none; }
+    .num-big {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(52px, 6vw, 80px);
+      font-weight: 900; color: var(--gold);
+      line-height: 1; letter-spacing: -2px;
+    }
+    .num-suffix { font-size: clamp(28px, 3.5vw, 44px); font-weight: 900; color: var(--gold); }
+    .num-label { font-size: 14px; color: rgba(255,255,255,0.55); margin-top: 12px; line-height: 1.4; }
+    .num-sub { font-size: 12px; color: rgba(255,255,255,0.3); margin-top: 6px; }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       6. HOW IT WORKS
+    ══════════════════════════════════════════════════════════════════════ */
+    #how { background: var(--white); padding: 100px 0; }
+    .how-header { text-align: center; margin-bottom: 72px; }
+    .how-header h2 { font-size: clamp(32px, 4vw, 48px); font-weight: 700; margin-top: 16px; }
+    .how-header h2 span { color: var(--gold); }
+    .how-header p { font-size: 17px; color: var(--text-mid); max-width: 500px; margin: 16px auto 0; }
+    .how-steps {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 0; position: relative;
+    }
+    /* Connecting line */
+    .how-steps::before {
+      content: '';
+      position: absolute; top: 48px; left: calc(16.66% + 24px); right: calc(16.66% + 24px);
+      height: 2px;
+      background: linear-gradient(90deg, var(--blue), var(--gold));
+      z-index: 0;
+    }
+    .step-item { text-align: center; padding: 0 32px; position: relative; z-index: 1; }
+    .step-num {
+      width: 96px; height: 96px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue), var(--navy));
+      border: 3px solid var(--gold);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 28px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px; font-weight: 900; color: var(--gold);
+      box-shadow: 0 0 30px rgba(255,215,0,0.25);
+    }
+    .step-item h3 { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+    .step-item p { font-size: 15px; color: var(--text-mid); line-height: 1.65; }
+    .step-detail {
+      margin-top: 16px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .step-detail li {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--text-mid);
+    }
+    .step-detail li i { color: var(--green); font-size: 11px; flex-shrink: 0; }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       7. TESTIMONIALS
+    ══════════════════════════════════════════════════════════════════════ */
+    #testimonials { background: var(--light-surf); padding: 100px 0; }
+    .test-header { text-align: center; margin-bottom: 64px; }
+    .test-header h2 { font-size: clamp(32px, 4vw, 48px); font-weight: 700; margin-top: 16px; }
+    .test-header p { font-size: 17px; color: var(--text-mid); max-width: 480px; margin: 16px auto 0; }
+    .test-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+    .test-card {
+      background: var(--white); border-radius: 16px; padding: 32px 28px;
+      box-shadow: 0 4px 24px rgba(26,86,219,0.07);
+      position: relative; overflow: hidden;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .test-card:hover { transform: translateY(-6px); box-shadow: 0 16px 48px rgba(26,86,219,0.13); }
+    .test-card::before {
+      content: '\201C'; position: absolute; top: 16px; right: 24px;
+      font-size: 80px; font-family: Georgia, serif; color: rgba(26,86,219,0.08);
+      line-height: 1;
+    }
+    .stars { color: var(--gold); font-size: 14px; margin-bottom: 16px; letter-spacing: 2px; }
+    .test-card blockquote {
+      font-size: 15px; color: var(--text-mid); line-height: 1.7;
+      font-style: italic; margin-bottom: 24px;
+    }
+    .test-author { display: flex; align-items: center; gap: 14px; }
+    .author-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 16px; font-weight: 800; color: var(--white);
+      flex-shrink: 0;
+    }
+    .av1 { background: linear-gradient(135deg, var(--blue), #0a38a0); }
+    .av2 { background: linear-gradient(135deg, #7c3aed, #4c1d95); }
+    .av3 { background: linear-gradient(135deg, var(--amber), #c97b10); }
+    .author-name { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; }
+    .author-type { font-size: 12px; color: var(--text-mid); margin-top: 2px; }
+    .test-returns {
+      margin-top: 16px; padding: 10px 14px;
+      background: rgba(0,200,117,0.08); border-radius: 8px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px; font-weight: 700; color: var(--green);
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       8. PRICING / COMPARISON
+    ══════════════════════════════════════════════════════════════════════ */
+    #pricing { background: var(--white); padding: 100px 0; }
+    .pricing-header { text-align: center; margin-bottom: 64px; }
+    .pricing-header h2 { font-size: clamp(32px, 4vw, 48px); font-weight: 700; margin-top: 16px; }
+    .pricing-header h2 span { color: var(--blue); }
+    .pricing-header p { font-size: 17px; color: var(--text-mid); max-width: 540px; margin: 16px auto 0; }
+    .comparison-wrap {
+      max-width: 860px; margin: 0 auto;
+      border-radius: 20px; overflow: hidden;
+      box-shadow: 0 8px 48px rgba(26,86,219,0.12);
+    }
+    .comp-header-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+    }
+    .comp-head {
+      padding: 24px 28px; text-align: center;
+      font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 800;
+    }
+    .comp-head.feature { background: var(--navy); color: rgba(255,255,255,0.5); text-align: left; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+    .comp-head.trad { background: #2d2d2d; color: var(--white); }
+    .comp-head.ib {
+      background: linear-gradient(135deg, var(--blue), #0a38a0);
+      color: var(--white);
+    }
+    .comp-head.ib .ib-badge {
+      display: block; margin-top: 4px; font-size: 10px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--gold);
+    }
+    .comp-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      border-bottom: 1px solid var(--border);
+    }
+    .comp-row:last-child { border-bottom: none; }
+    .comp-cell {
+      padding: 18px 28px; display: flex; align-items: center;
+      font-size: 14px;
+    }
+    .comp-cell.feature-name {
+      background: #f8faff; color: var(--text-dark);
+      font-weight: 600; font-size: 14px;
+    }
+    .comp-cell.trad-val { background: #f9f9f9; color: var(--red); font-weight: 700; font-family: 'Space Grotesk', sans-serif; }
+    .comp-cell.ib-val {
+      background: rgba(26,86,219,0.04);
+      color: var(--green); font-weight: 800; font-family: 'Space Grotesk', sans-serif;
+    }
+    .comp-cell i { margin-right: 8px; font-size: 13px; }
+    .trad-x { color: var(--red); }
+    .ib-chk { color: var(--green); }
+    .comp-footer {
+      background: linear-gradient(135deg, var(--navy), var(--navy-deep));
+      padding: 32px 28px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .comp-footer-txt { font-family: 'Space Grotesk', sans-serif; color: var(--white); }
+    .comp-footer-txt .big { font-size: 28px; font-weight: 900; color: var(--gold); }
+    .comp-footer-txt .small { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       9. FINAL CTA
+    ══════════════════════════════════════════════════════════════════════ */
+    #cta-final {
+      background: var(--navy-deep);
+      padding: 120px 0;
+      text-align: center;
+      position: relative; overflow: hidden;
+    }
+    #cta-final::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 800px 500px at 50% 50%, rgba(26,86,219,0.2) 0%, transparent 70%);
+    }
+    .cta-final-inner { position: relative; z-index: 1; }
+    .cta-urgency {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,77,77,0.15); border: 1px solid rgba(255,77,77,0.4);
+      color: #ff6b6b; font-size: 12px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; padding: 7px 16px; border-radius: 100px;
+      margin-bottom: 28px;
+    }
+    .cta-urgency .pulse {
+      width: 8px; height: 8px; background: var(--red); border-radius: 50%;
+      animation: blink 1s infinite;
+    }
+    #cta-final h2 {
+      font-size: clamp(36px, 5vw, 64px); font-weight: 900; color: var(--white);
+      margin-bottom: 16px; line-height: 1.1;
+    }
+    #cta-final h2 span { color: var(--gold); }
+    #cta-final p { font-size: 18px; color: rgba(255,255,255,0.6); max-width: 520px; margin: 0 auto 40px; line-height: 1.7; }
+    .cta-form {
+      display: flex; gap: 12px; justify-content: center;
+      flex-wrap: wrap; margin-bottom: 24px;
+    }
+    .cta-input {
+      padding: 16px 24px; border-radius: 10px; border: 2px solid rgba(26,86,219,0.4);
+      background: rgba(255,255,255,0.06); color: var(--white);
+      font-size: 16px; font-family: 'DM Sans', sans-serif;
+      width: 300px; max-width: 100%;
+      outline: none; transition: border-color 0.2s;
+    }
+    .cta-input:focus { border-color: var(--gold); }
+    .cta-input::placeholder { color: rgba(255,255,255,0.35); }
+    .cta-note { font-size: 13px; color: rgba(255,255,255,0.35); }
+    .cta-note i { margin-right: 6px; }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       10. FAQ
+    ══════════════════════════════════════════════════════════════════════ */
+    #faq { background: var(--light-surf); padding: 100px 0; }
+    .faq-header { text-align: center; margin-bottom: 56px; }
+    .faq-header h2 { font-size: clamp(32px, 4vw, 48px); font-weight: 700; margin-top: 16px; }
+    .faq-list { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .faq-item {
+      background: var(--white); border-radius: 12px;
+      border: 1.5px solid var(--border);
+      overflow: hidden; transition: box-shadow 0.3s;
+    }
+    .faq-item:hover { box-shadow: 0 4px 20px rgba(26,86,219,0.08); }
+    .faq-q {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 22px 28px; cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700;
+      color: var(--text-dark); user-select: none;
+    }
+    .faq-icon {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--light-surf); color: var(--blue);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; flex-shrink: 0; transition: transform 0.3s, background 0.3s;
+    }
+    .faq-item.open .faq-icon { transform: rotate(45deg); background: var(--blue); color: var(--white); }
+    .faq-a {
+      max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.3s;
+      font-size: 15px; color: var(--text-mid); line-height: 1.7;
+      padding: 0 28px;
+    }
+    .faq-item.open .faq-a { max-height: 200px; padding: 0 28px 22px; }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       11. FOOTER
+    ══════════════════════════════════════════════════════════════════════ */
+    #footer { background: var(--navy-deep); padding: 72px 0 40px; }
+    .footer-grid {
+      display: grid; grid-template-columns: 1.8fr 1fr 1fr 1fr; gap: 48px;
+      margin-bottom: 56px;
+    }
+    .footer-brand .logo { margin-bottom: 16px; }
+    .footer-brand p { font-size: 14px; color: rgba(255,255,255,0.45); line-height: 1.7; max-width: 260px; }
+    .footer-social { display: flex; gap: 10px; margin-top: 20px; }
+    .soc-btn {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; transition: all 0.2s;
+    }
+    .soc-btn:hover { background: var(--blue); color: var(--white); }
+    .footer-col h4 {
+      font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700;
+      color: rgba(255,255,255,0.9); letter-spacing: 1.5px; text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .footer-col ul { display: flex; flex-direction: column; gap: 10px; }
+    .footer-col ul li a {
+      font-size: 14px; color: rgba(255,255,255,0.45);
+      transition: color 0.2s;
+    }
+    .footer-col ul li a:hover { color: var(--white); }
+    .footer-divider { height: 1px; background: rgba(255,255,255,0.08); margin-bottom: 32px; }
+    .footer-bottom {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 24px; flex-wrap: wrap;
+    }
+    .footer-legal { font-size: 11px; color: rgba(255,255,255,0.28); line-height: 1.6; max-width: 700px; }
+    .footer-legal a { color: rgba(255,255,255,0.4); text-decoration: underline; }
+    .footer-copy { font-size: 12px; color: rgba(255,255,255,0.28); white-space: nowrap; }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════════════════════════════════════ */
+    @media (max-width: 1024px) {
+      .hero-inner { grid-template-columns: 1fr; gap: 48px; }
+      .hero-right { order: -1; max-width: 500px; margin: 0 auto; }
+      .numbers-grid { grid-template-columns: repeat(2, 1fr); }
+      .num-item:nth-child(2) { border-right: none; }
+      .num-item:nth-child(3) { border-top: 1px solid rgba(255,255,255,0.08); }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 768px) {
+      .nav { display: none; }
+      .nav.open {
+        display: flex; flex-direction: column; align-items: flex-start;
+        position: fixed; top: 68px; left: 0; right: 0;
+        background: rgba(7,15,36,0.98); padding: 24px;
+        border-bottom: 1px solid rgba(26,86,219,0.3);
+        gap: 20px; z-index: 999;
+      }
+      .nav.open a { font-size: 16px; }
+      .burger { display: flex; }
+      .problem-grid,
+      .solution-grid,
+      .test-grid,
+      .how-steps { grid-template-columns: 1fr; }
+      .how-steps::before { display: none; }
+      .comp-header-row,
+      .comp-row { grid-template-columns: 1fr 1fr 1fr; }
+      .comp-cell, .comp-head { padding: 14px 12px; font-size: 12px; }
+      .comp-footer { flex-direction: column; gap: 20px; text-align: center; }
+      .hero-stats { gap: 20px; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .footer-bottom { flex-direction: column; }
+    }
+    @media (max-width: 480px) {
+      .hero-ctas { flex-direction: column; }
+      .hero-ctas .btn { justify-content: center; }
+      .cta-form { flex-direction: column; align-items: center; }
+      .cta-input { width: 100%; }
+      .numbers-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ─── SCROLL REVEAL ─────────────────────────────────────────────────── */
+    .reveal {
+      opacity: 0; transform: translateY(30px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════════════════════════════════ -->
+<header id="header">
+  <div class="container">
+    <div class="header-inner">
+
+      <!-- Logo -->
+      <a href="#hero" class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 17L9 11L13 15L21 7M21 7H15M21 7V13"/>
+          </svg>
+        </div>
+        <div class="logo-text">
+          INTERACTIVE<br/><span>BROKERS</span>
+        </div>
+      </a>
+
+      <!-- Nav -->
+      <nav class="nav" id="main-nav">
+        <a href="#solution">Platform</a>
+        <a href="#numbers">Why IB</a>
+        <a href="#how">Get Started</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+
+      <!-- CTA & Burger -->
+      <div style="display:flex;align-items:center;gap:16px;">
+        <button class="header-cta" onclick="document.getElementById('cta-final').scrollIntoView({behavior:'smooth'})">
+          Open Account &rarr;
+        </button>
+        <div class="burger" id="burger">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     HERO
+══════════════════════════════════════════════════════════════════════ -->
+<section id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+
+  <!-- Main content -->
+  <div class="hero-content">
+    <div class="hero-inner">
+
+      <!-- Left -->
+      <div class="hero-left">
+        <div class="hero-tag">
+          <span class="dot"></span>
+          Trusted since 1978 &nbsp;·&nbsp; 2.3M+ active accounts
+        </div>
+        <h1 class="hero-h1">
+          Trade <span class="gold-word">Everything.</span><br/>
+          Pay Almost<br/>Nothing.
+        </h1>
+        <p class="hero-sub">
+          One account. 160 markets. 33 countries. Access stocks, options, futures, forex, bonds, and funds at industry-lowest commissions — all from a single, powerful platform.
+        </p>
+        <div class="hero-ctas">
+          <button class="btn btn-gold" onclick="document.getElementById('cta-final').scrollIntoView({behavior:'smooth'})">
+            <i class="fa-solid fa-rocket"></i>
+            Open Free Account
+          </button>
+          <button class="btn btn-ghost" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">
+            <i class="fa-solid fa-play"></i>
+            See How It Works
+          </button>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <div class="num">$0</div>
+            <div class="label">Commissions on<br/>US stocks &amp; ETFs</div>
+          </div>
+          <div class="hero-stat">
+            <div class="num">160+</div>
+            <div class="label">Global<br/>Markets</div>
+          </div>
+          <div class="hero-stat">
+            <div class="num">33</div>
+            <div class="label">Countries<br/>Covered</div>
+          </div>
+          <div class="hero-stat">
+            <div class="num">#1</div>
+            <div class="label">Rated Online<br/>Broker</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right – simulated dashboard -->
+      <div class="hero-right">
+        <div class="float-badge">&#9650; Portfolio +24.7% YTD</div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">S&amp;P 500 &nbsp;·&nbsp; Live</div>
+              <div class="chart-price">5,847.28</div>
+            </div>
+            <div class="chart-change">+1.34%</div>
+          </div>
+          <!-- Fake chart SVG -->
+          <div class="chart-svg-wrap">
+            <svg viewBox="0 0 400 140" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#1A56DB" stop-opacity="0.4"/>
+                  <stop offset="100%" stop-color="#1A56DB" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,100 C20,95 30,105 50,90 C70,75 80,80 100,65 C120,50 130,55 150,45 C170,35 185,50 200,38 C215,26 230,40 250,30 C270,20 280,35 300,25 C320,15 335,28 355,18 C370,10 385,20 400,12 L400,140 L0,140 Z" fill="url(#chartGrad)"/>
+              <path d="M0,100 C20,95 30,105 50,90 C70,75 80,80 100,65 C120,50 130,55 150,45 C170,35 185,50 200,38 C215,26 230,40 250,30 C270,20 280,35 300,25 C320,15 335,28 355,18 C370,10 385,20 400,12" fill="none" stroke="#1A56DB" stroke-width="2.5"/>
+              <!-- Golden dot at end -->
+              <circle cx="400" cy="12" r="5" fill="#FFD700"/>
+              <circle cx="400" cy="12" r="10" fill="#FFD700" opacity="0.2">
+                <animate attributeName="r" values="5;14;5" dur="2s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0.3;0;0.3" dur="2s" repeatCount="indefinite"/>
+              </circle>
+            </svg>
+          </div>
+          <!-- Mini tickers -->
+          <div class="mini-tickers">
+            <div class="mini-tick">
+              <div class="sym">AAPL</div>
+              <div class="val">189.42</div>
+              <div class="chg chg-up">+2.14%</div>
+            </div>
+            <div class="mini-tick">
+              <div class="sym">TSLA</div>
+              <div class="val">248.77</div>
+              <div class="chg chg-up">+4.06%</div>
+            </div>
+            <div class="mini-tick">
+              <div class="sym">NVDA</div>
+              <div class="val">875.62</div>
+              <div class="chg chg-up">+3.28%</div>
+            </div>
+            <div class="mini-tick">
+              <div class="sym">AMZN</div>
+              <div class="val">182.09</div>
+              <div class="chg chg-dn">-0.47%</div>
+            </div>
+          </div>
+        </div>
+        <div class="float-badge2"><i class="fa-solid fa-circle-check" style="margin-right:6px;"></i> $0 commission saved today</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Ticker tape -->
+  <div class="ticker-wrap">
+    <div class="ticker-track" id="ticker">
+      <!-- Items duplicated for seamless loop -->
+      <span class="ticker-item"><span class="t-sym">SPY</span> 584.72 <span class="t-up">▲ +1.34%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">QQQ</span> 487.38 <span class="t-up">▲ +1.82%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">AAPL</span> 189.42 <span class="t-up">▲ +2.14%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">MSFT</span> 415.26 <span class="t-up">▲ +0.98%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">NVDA</span> 875.62 <span class="t-up">▲ +3.28%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">TSLA</span> 248.77 <span class="t-up">▲ +4.06%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">BTC-USD</span> 68,412 <span class="t-up">▲ +2.71%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">EUR/USD</span> 1.0842 <span class="t-dn">▼ -0.12%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">GOLD</span> 2,347.80 <span class="t-up">▲ +0.54%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">AMZN</span> 182.09 <span class="t-dn">▼ -0.47%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">META</span> 524.33 <span class="t-up">▲ +1.63%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">JPY/USD</span> 0.00651 <span class="t-dn">▼ -0.31%</span></span>
+      <span class="ticker-sep">|</span>
+      <!-- Duplicate for seamless loop -->
+      <span class="ticker-item"><span class="t-sym">SPY</span> 584.72 <span class="t-up">▲ +1.34%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">QQQ</span> 487.38 <span class="t-up">▲ +1.82%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">AAPL</span> 189.42 <span class="t-up">▲ +2.14%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">MSFT</span> 415.26 <span class="t-up">▲ +0.98%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">NVDA</span> 875.62 <span class="t-up">▲ +3.28%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">TSLA</span> 248.77 <span class="t-up">▲ +4.06%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">BTC-USD</span> 68,412 <span class="t-up">▲ +2.71%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">EUR/USD</span> 1.0842 <span class="t-dn">▼ -0.12%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">GOLD</span> 2,347.80 <span class="t-up">▲ +0.54%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">AMZN</span> 182.09 <span class="t-dn">▼ -0.47%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">META</span> 524.33 <span class="t-up">▲ +1.63%</span></span>
+      <span class="ticker-sep">|</span>
+      <span class="ticker-item"><span class="t-sym">JPY/USD</span> 0.00651 <span class="t-dn">▼ -0.31%</span></span>
+      <span class="ticker-sep">|</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     PROBLEM
+══════════════════════════════════════════════════════════════════════ -->
+<section id="problem">
+  <div class="container">
+    <div class="problem-header reveal">
+      <span class="section-tag" style="background:rgba(255,77,77,0.1);color:var(--red);border:1px solid rgba(255,77,77,0.3);">
+        <i class="fa-solid fa-triangle-exclamation" style="margin-right:6px;"></i>
+        The Problem
+      </span>
+      <h2>The old way of investing is <span>costing you.</span></h2>
+      <div class="grad-rule center" style="background:linear-gradient(90deg,var(--red),#ff8a8a);"></div>
+      <p>Every day you stick with a legacy broker, you're bleeding money in hidden fees, missed opportunities, and artificially limited access.</p>
+    </div>
+
+    <div class="problem-grid">
+      <div class="prob-card reveal reveal-delay-1">
+        <div class="prob-x"><i class="fa-solid fa-xmark"></i></div>
+        <h3>Commissions That Eat Your Returns</h3>
+        <p>Traditional brokers charge $7–$25 per trade. On 100 trades a year, that's up to $2,500 silently leaving your account before you even see a gain.</p>
+        <div class="prob-stat">
+          $2,500+
+          <span>drained annually by legacy broker fees</span>
+        </div>
+      </div>
+
+      <div class="prob-card reveal reveal-delay-2">
+        <div class="prob-x"><i class="fa-solid fa-xmark"></i></div>
+        <h3>Locked Out of Global Markets</h3>
+        <p>Your current broker likely only offers US stocks. European indices, Asian markets, commodity futures, forex — all off the table. You're fighting with one hand tied behind your back.</p>
+        <div class="prob-stat">
+          90%
+          <span>of global opportunities inaccessible</span>
+        </div>
+      </div>
+
+      <div class="prob-card reveal reveal-delay-3">
+        <div class="prob-x"><i class="fa-solid fa-xmark"></i></div>
+        <h3>Inflation Destroys Idle Cash</h3>
+        <p>Every day your cash sits in a low-yield account while inflation runs at 3–4%, you lose purchasing power. Markets don't wait for you to "feel ready."</p>
+        <div class="prob-stat">
+          -3.4%
+          <span>real return on idle cash per year</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     SOLUTION — IB ADVANTAGE
+══════════════════════════════════════════════════════════════════════ -->
+<section id="solution">
+  <div class="container">
+    <div class="solution-header reveal">
+      <span class="section-tag tag-blue">
+        <i class="fa-solid fa-bolt" style="margin-right:6px;"></i>
+        The IB Advantage
+      </span>
+      <h2>A smarter platform for <span>serious investors</span></h2>
+      <div class="grad-rule center"></div>
+      <p>We've spent 45 years engineering the infrastructure that institutional traders rely on — and we've made it available to every individual investor.</p>
+    </div>
+
+    <div class="solution-grid">
+      <div class="sol-card reveal reveal-delay-1">
+        <div class="sol-accent"></div>
+        <div class="sol-check"><i class="fa-solid fa-check"></i></div>
+        <h3>Best-in-Class Execution</h3>
+        <p>Our IBKR SmartRouting technology automatically seeks out the best available prices across dozens of exchanges, often resulting in price improvements that save you money on every single trade.</p>
+        <div class="sol-highlight">
+          <i class="fa-solid fa-star" style="color:var(--gold);margin-right:6px;"></i>
+          Avg. $0.47 price improvement per 100 shares
+        </div>
+      </div>
+
+      <div class="sol-card reveal reveal-delay-2">
+        <div class="sol-accent"></div>
+        <div class="sol-check"><i class="fa-solid fa-check"></i></div>
+        <h3>Every Asset. One Account.</h3>
+        <p>Stocks, ETFs, options, futures, bonds, forex, funds, and crypto — all accessible from a single unified account. No more juggling platforms or transferring funds between accounts.</p>
+        <div class="sol-highlight">
+          <i class="fa-solid fa-globe" style="color:var(--gold);margin-right:6px;"></i>
+          160 markets across 33 countries
+        </div>
+      </div>
+
+      <div class="sol-card reveal reveal-delay-3">
+        <div class="sol-accent"></div>
+        <div class="sol-check"><i class="fa-solid fa-check"></i></div>
+        <h3>Put Your Cash to Work</h3>
+        <p>Earn up to 4.83% APY on your idle USD cash balance with IBKR's interest sweep program. Your uninvested dollars don't sit idle — they work for you around the clock.</p>
+        <div class="sol-highlight">
+          <i class="fa-solid fa-coins" style="color:var(--gold);margin-right:6px;"></i>
+          Up to 4.83% APY on uninvested cash
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     NUMBERS
+══════════════════════════════════════════════════════════════════════ -->
+<section id="numbers">
+  <div class="container">
+    <div class="numbers-grid">
+      <div class="num-item reveal">
+        <div class="num-big" data-target="2.3" data-suffix="M+">0</div>
+        <div class="num-label">Active Client Accounts<br/>Worldwide</div>
+        <div class="num-sub">and growing every day</div>
+      </div>
+      <div class="num-item reveal reveal-delay-1">
+        <div class="num-big" data-target="160" data-suffix="+">0</div>
+        <div class="num-label">Global Markets<br/>& Exchanges</div>
+        <div class="num-sub">across 33 countries</div>
+      </div>
+      <div class="num-item reveal reveal-delay-2">
+        <div class="num-big" data-target="$0" data-suffix="">$0</div>
+        <div class="num-label">Commissions on<br/>US Stocks &amp; ETFs</div>
+        <div class="num-sub">no hidden fees, ever</div>
+      </div>
+      <div class="num-item reveal reveal-delay-3">
+        <div class="num-big" data-target="45" data-suffix="yrs">0</div>
+        <div class="num-label">Years of Continuous<br/>Innovation</div>
+        <div class="num-sub">founded 1978, NYSE listed</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     HOW IT WORKS
+══════════════════════════════════════════════════════════════════════ -->
+<section id="how">
+  <div class="container">
+    <div class="how-header reveal">
+      <span class="section-tag tag-blue">
+        <i class="fa-solid fa-map" style="margin-right:6px;"></i>
+        Getting Started
+      </span>
+      <h2>From zero to trading in <span>3 steps</span></h2>
+      <div class="grad-rule center"></div>
+      <p>No branch visits. No paperwork piles. Open your account entirely online in minutes.</p>
+    </div>
+
+    <div class="how-steps">
+      <div class="step-item reveal">
+        <div class="step-num">01</div>
+        <h3>Open Your Account</h3>
+        <p>Complete a fully digital application in under 10 minutes. No account minimums required for cash accounts.</p>
+        <ul class="step-detail">
+          <li><i class="fa-solid fa-circle-check"></i> Government ID verification</li>
+          <li><i class="fa-solid fa-circle-check"></i> Digital signature</li>
+          <li><i class="fa-solid fa-circle-check"></i> Approval typically same day</li>
+        </ul>
+      </div>
+
+      <div class="step-item reveal reveal-delay-1">
+        <div class="step-num">02</div>
+        <h3>Fund Your Account</h3>
+        <p>Deposit via bank transfer, wire, or check. IB supports 25+ currencies for international clients.</p>
+        <ul class="step-detail">
+          <li><i class="fa-solid fa-circle-check"></i> ACH, SEPA &amp; wire transfers</li>
+          <li><i class="fa-solid fa-circle-check"></i> 25+ base currencies</li>
+          <li><i class="fa-solid fa-circle-check"></i> Funds visible instantly</li>
+        </ul>
+      </div>
+
+      <div class="step-item reveal reveal-delay-2">
+        <div class="step-num">03</div>
+        <h3>Start Trading</h3>
+        <p>Place your first trade via the award-winning Trader Workstation, mobile app, or Client Portal — whichever fits your style.</p>
+        <ul class="step-detail">
+          <li><i class="fa-solid fa-circle-check"></i> Desktop, web &amp; mobile platforms</li>
+          <li><i class="fa-solid fa-circle-check"></i> Real-time data &amp; analytics</li>
+          <li><i class="fa-solid fa-circle-check"></i> Paper trading to practice first</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:56px;" class="reveal">
+      <button class="btn btn-blue" onclick="document.getElementById('cta-final').scrollIntoView({behavior:'smooth'})">
+        <i class="fa-solid fa-rocket"></i>
+        Start Your Application Now
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     TESTIMONIALS
+══════════════════════════════════════════════════════════════════════ -->
+<section id="testimonials">
+  <div class="container">
+    <div class="test-header reveal">
+      <span class="section-tag tag-blue">
+        <i class="fa-solid fa-star" style="margin-right:6px;"></i>
+        Trader Stories
+      </span>
+      <h2>Real investors. Real results.</h2>
+      <div class="grad-rule center"></div>
+      <p>Over 2.3 million clients trust Interactive Brokers to power their trading — from first-time investors to hedge fund managers.</p>
+    </div>
+
+    <div class="test-grid">
+      <div class="test-card reveal">
+        <div class="stars">★★★★★</div>
+        <blockquote>"I switched from a major bank broker and immediately saved over $1,800 in my first year just from lower commissions. The platform takes some getting used to but it's worth every minute of learning."</blockquote>
+        <div class="test-author">
+          <div class="author-avatar av1">MR</div>
+          <div>
+            <div class="author-name">Michael R.</div>
+            <div class="author-type">Long-term equity investor &bull; Chicago, IL</div>
+          </div>
+        </div>
+        <div class="test-returns"><i class="fa-solid fa-arrow-trend-up"></i> Portfolio up 31.4% in 2023</div>
+      </div>
+
+      <div class="test-card reveal reveal-delay-1">
+        <div class="stars">★★★★★</div>
+        <blockquote>"As an options trader, the margin rates and execution speed at IB are unmatched. I've tried five other brokers. None come close. The TWS platform is genuinely institutional-grade."</blockquote>
+        <div class="test-author">
+          <div class="author-avatar av2">SP</div>
+          <div>
+            <div class="author-name">Sarah P.</div>
+            <div class="author-type">Options trader &bull; Austin, TX</div>
+          </div>
+        </div>
+        <div class="test-returns"><i class="fa-solid fa-arrow-trend-up"></i> Active since 2019, 500+ trades/year</div>
+      </div>
+
+      <div class="test-card reveal reveal-delay-2">
+        <div class="stars">★★★★★</div>
+        <blockquote>"I trade European stocks and Asian ETFs alongside my US positions. No other retail broker gives me this kind of global access in one account. The forex rates are excellent too."</blockquote>
+        <div class="test-author">
+          <div class="author-avatar av3">DK</div>
+          <div>
+            <div class="author-name">Daniel K.</div>
+            <div class="author-type">Global macro trader &bull; London, UK</div>
+          </div>
+        </div>
+        <div class="test-returns"><i class="fa-solid fa-globe"></i> Trades across 12 countries</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     PRICING COMPARISON
+══════════════════════════════════════════════════════════════════════ -->
+<section id="pricing">
+  <div class="container">
+    <div class="pricing-header reveal">
+      <span class="section-tag tag-blue">
+        <i class="fa-solid fa-scale-balanced" style="margin-right:6px;"></i>
+        Fee Comparison
+      </span>
+      <h2>Stop overpaying. <span>Switch to IB.</span></h2>
+      <div class="grad-rule center"></div>
+      <p>Side-by-side comparison of IB versus the average traditional brokerage. The numbers don't lie.</p>
+    </div>
+
+    <div class="comparison-wrap reveal">
+      <!-- Header row -->
+      <div class="comp-header-row">
+        <div class="comp-head feature">Fee Category</div>
+        <div class="comp-head trad">
+          <i class="fa-solid fa-landmark" style="display:block;font-size:20px;margin-bottom:6px;"></i>
+          Traditional Broker
+        </div>
+        <div class="comp-head ib">
+          <i class="fa-solid fa-chart-line" style="display:block;font-size:20px;margin-bottom:4px;"></i>
+          Interactive Brokers
+          <span class="ib-badge">Best-In-Class</span>
+        </div>
+      </div>
+
+      <!-- Data rows -->
+      <div class="comp-row">
+        <div class="comp-cell feature-name"><i class="fa-solid fa-arrows-left-right"></i> &nbsp; US Stocks Commission</div>
+        <div class="comp-cell trad-val"><i class="fa-solid fa-xmark trad-x"></i> $6.95 / trade</div>
+        <div class="comp-cell ib-val"><i class="fa-solid fa-check ib-chk"></i> $0.00</div>
+      </div>
+      <div class="comp-row">
+        <div class="comp-cell feature-name"><i class="fa-solid fa-globe"></i> &nbsp; International Stocks</div>
+        <div class="comp-cell trad-val"><i class="fa-solid fa-xmark trad-x"></i> Not available</div>
+        <div class="comp-cell ib-val"><i class="fa-solid fa-check ib-chk"></i> 160 markets</div>
+      </div>
+      <div class="comp-row">
+        <div class="comp-cell feature-name"><i class="fa-solid fa-percent"></i> &nbsp; Margin Rate</div>
+        <div class="comp-cell trad-val"><i class="fa-solid fa-xmark trad-x"></i> 11.75% – 14.5%</div>
+        <div class="comp-cell ib-val"><i class="fa-solid fa-check ib-chk"></i> From 5.83%</div>
+      </div>
+      <div class="comp-row">
+        <div class="comp-cell feature-name"><i class="fa-solid fa-piggy-bank"></i> &nbsp; Cash Interest (APY)</div>
+        <div class="comp-cell trad-val"><i class="fa-solid fa-xmark trad-x"></i> 0.01% – 0.5%</div>
+        <div class="comp-cell ib-val"><i class="fa-solid fa-check ib-chk"></i> Up to 4.83%</div>
+      </div>
+      <div class="comp-row">
+        <div class="comp-cell feature-name"><i class="fa-solid fa-chart-candlestick"></i> &nbsp; Options Contracts</div>
+        <div class="comp-cell trad-val"><i class="fa-solid fa-xmark trad-x"></i> $0.65 / contract</div>
+        <div class="comp-cell ib-val"><i class="fa-solid fa-check ib-chk"></i> From $0.15</div>
+      </div>
+      <div class="comp-row">
+        <div class="comp-cell feature-name"><i class="fa-solid fa-building-columns"></i> &nbsp; Account Minimum</div>
+        <div class="comp-cell trad-val"><i class="fa-solid fa-xmark trad-x"></i> $500 – $2,000</div>
+        <div class="comp-cell ib-val"><i class="fa-solid fa-check ib-chk"></i> $0 (cash acct)</div>
+      </div>
+      <div class="comp-row">
+        <div class="comp-cell feature-name"><i class="fa-solid fa-mobile-screen"></i> &nbsp; Mobile Trading App</div>
+        <div class="comp-cell trad-val" style="color:var(--text-mid);">Basic</div>
+        <div class="comp-cell ib-val"><i class="fa-solid fa-check ib-chk"></i> Award-winning</div>
+      </div>
+
+      <!-- Footer -->
+      <div class="comp-footer">
+        <div class="comp-footer-txt">
+          <div class="big">Save $2,500+/yr</div>
+          <div class="small">Average savings vs. traditional broker on 100 trades per year</div>
+        </div>
+        <button class="btn btn-gold" onclick="document.getElementById('cta-final').scrollIntoView({behavior:'smooth'})">
+          <i class="fa-solid fa-rocket"></i>
+          Switch to IB Now
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     FINAL CTA
+══════════════════════════════════════════════════════════════════════ -->
+<section id="cta-final">
+  <div class="container">
+    <div class="cta-final-inner reveal">
+      <div class="cta-urgency">
+        <span class="pulse"></span>
+        Markets are open right now
+      </div>
+      <h2>Don't miss the<br/><span>next bull run.</span></h2>
+      <p>Open your Interactive Brokers account today. No minimums. No hidden fees. Your first trade could be live within 24 hours.</p>
+
+      <div class="cta-form">
+        <input type="email" class="cta-input" placeholder="Enter your email address" />
+        <button class="btn btn-gold" style="padding:16px 36px;">
+          <i class="fa-solid fa-rocket"></i>
+          Open Free Account
+        </button>
+      </div>
+
+      <p class="cta-note">
+        <i class="fa-solid fa-shield-halved"></i>
+        Your information is protected by 256-bit encryption. We never sell your data.
+      </p>
+
+      <!-- Trust badges row -->
+      <div style="display:flex;gap:32px;justify-content:center;flex-wrap:wrap;margin-top:48px;padding-top:40px;border-top:1px solid rgba(255,255,255,0.1);">
+        <div style="text-align:center;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:900;color:var(--gold);">SIPC</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px;">Member — up to $500K coverage</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:900;color:var(--gold);">FINRA</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px;">Registered &amp; Regulated</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:900;color:var(--gold);">NYSE</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px;">Listed since 2007 (IBKR)</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:900;color:var(--gold);">FCA</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px;">FCA Regulated (UK clients)</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:900;color:var(--gold);">IIROC</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px;">Canadian Regulatory Coverage</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     FAQ
+══════════════════════════════════════════════════════════════════════ -->
+<section id="faq">
+  <div class="container">
+    <div class="faq-header reveal">
+      <span class="section-tag tag-blue">
+        <i class="fa-solid fa-circle-question" style="margin-right:6px;"></i>
+        FAQ
+      </span>
+      <h2>Questions? We have answers.</h2>
+      <div class="grad-rule center"></div>
+    </div>
+
+    <div class="faq-list">
+
+      <div class="faq-item reveal">
+        <div class="faq-q">
+          I've never traded before. Is Interactive Brokers right for me?
+          <div class="faq-icon"><i class="fa-solid fa-plus"></i></div>
+        </div>
+        <div class="faq-a">
+          Absolutely. While IB is favored by professional traders for its advanced tools, we offer IBKR Lite — a simplified, commission-free experience built for beginners. You can also use our paper trading (simulation) account to practice with real market data before investing a single dollar. We also offer an extensive library of free courses, webinars, and educational videos.
+        </div>
+      </div>
+
+      <div class="faq-item reveal reveal-delay-1">
+        <div class="faq-q">
+          Is my money safe at Interactive Brokers?
+          <div class="faq-icon"><i class="fa-solid fa-plus"></i></div>
+        </div>
+        <div class="faq-a">
+          Yes. Interactive Brokers is a NYSE-listed, publicly traded company (IBKR) regulated by FINRA and a member of SIPC, which covers your account up to $500,000 (including $250,000 for cash). In addition to SIPC coverage, IB provides additional coverage through Lloyd's of London and other insurers. Your securities are held in a separate account, segregated from company funds.
+        </div>
+      </div>
+
+      <div class="faq-item reveal reveal-delay-2">
+        <div class="faq-q">
+          What is IBKR Pro vs. IBKR Lite, and which should I choose?
+          <div class="faq-icon"><i class="fa-solid fa-plus"></i></div>
+        </div>
+        <div class="faq-a">
+          IBKR Lite offers commission-free trades on US stocks and ETFs with no monthly fees — ideal for casual, long-term investors. IBKR Pro uses a tiered pricing model where active traders can pay as little as $0.0005 per share, and gains access to the full suite of professional tools, SmartRouting, and higher interest rates on idle cash. Both plans share the same account and can be toggled at any time.
+        </div>
+      </div>
+
+      <div class="faq-item reveal reveal-delay-3">
+        <div class="faq-q">
+          How long does it take to open an account and make my first trade?
+          <div class="faq-icon"><i class="fa-solid fa-plus"></i></div>
+        </div>
+        <div class="faq-a">
+          Most applications are approved within the same business day — often within a few hours. Once approved, you can deposit funds immediately via ACH transfer (US) or SEPA (EU). Funds are typically reflected in your account within 1–2 business days, at which point you can place your first trade. From start to first trade: often under 24 hours.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════════════════════════════════ -->
+<footer id="footer">
+  <div class="container">
+    <div class="footer-grid">
+
+      <!-- Brand col -->
+      <div class="footer-brand">
+        <a href="#hero" class="logo">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 17L9 11L13 15L21 7M21 7H15M21 7V13"/>
+            </svg>
+          </div>
+          <div class="logo-text">
+            INTERACTIVE<br/><span>BROKERS</span>
+          </div>
+        </a>
+        <p>Professional-grade trading infrastructure for every individual investor. One account. Every market.</p>
+        <div class="footer-social">
+          <a href="#" class="soc-btn"><i class="fab fa-x-twitter"></i></a>
+          <a href="#" class="soc-btn"><i class="fab fa-linkedin-in"></i></a>
+          <a href="#" class="soc-btn"><i class="fab fa-youtube"></i></a>
+          <a href="#" class="soc-btn"><i class="fab fa-facebook-f"></i></a>
+        </div>
+      </div>
+
+      <!-- Links cols -->
+      <div class="footer-col">
+        <h4>Platform</h4>
+        <ul>
+          <li><a href="#">Trader Workstation</a></li>
+          <li><a href="#">Mobile Trading</a></li>
+          <li><a href="#">Client Portal</a></li>
+          <li><a href="#">Paper Trading</a></li>
+          <li><a href="#">IBKR APIs</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Markets</h4>
+        <ul>
+          <li><a href="#">Stocks &amp; ETFs</a></li>
+          <li><a href="#">Options</a></li>
+          <li><a href="#">Futures</a></li>
+          <li><a href="#">Forex</a></li>
+          <li><a href="#">Bonds &amp; Funds</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About IB</a></li>
+          <li><a href="#">Press Room</a></li>
+          <li><a href="#">Careers</a></li>
+          <li><a href="#">Regulatory Info</a></li>
+          <li><a href="#">Contact Us</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="footer-divider"></div>
+
+    <div class="footer-bottom">
+      <div class="footer-legal">
+        <strong style="color:rgba(255,255,255,0.5);">Important Disclosures:</strong> Trading in financial instruments involves risk of loss. Past performance is not indicative of future results. This page is for informational purposes only and does not constitute a solicitation or offer to buy or sell securities. Interactive Brokers LLC is a member of <a href="#">NYSE</a>, <a href="#">FINRA</a>, <a href="#">SIPC</a>. Interactive Brokers Group, Inc. is a holding company whose subsidiaries provide brokerage services worldwide. $0 commissions apply to IBKR Lite US listed stocks and ETFs only. Other fees may apply. Margin lending involves risk and may increase losses. APY rates subject to change without notice. Regulatory coverage varies by country of residence.
+      </div>
+      <div class="footer-copy">© 2026 Interactive Brokers LLC.<br/>All rights reserved.</div>
+    </div>
+
+  </div>
+</footer>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  'use strict';
+
+  /* ─── BURGER MENU ─────────────────────────────────────────────────── */
+  const burger = document.getElementById('burger');
+  const nav    = document.getElementById('main-nav');
+  burger.addEventListener('click', function() {
+    nav.classList.toggle('open');
+    const spans = burger.querySelectorAll('span');
+    if (nav.classList.contains('open')) {
+      spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+      spans[1].style.opacity   = '0';
+      spans[2].style.transform = 'rotate(-45deg) translate(5px, -5px)';
+    } else {
+      spans[0].style.transform = '';
+      spans[1].style.opacity   = '';
+      spans[2].style.transform = '';
+    }
+  });
+
+  // Close nav on link click (mobile)
+  nav.querySelectorAll('a').forEach(function(a) {
+    a.addEventListener('click', function() {
+      nav.classList.remove('open');
+      burger.querySelectorAll('span').forEach(function(s) {
+        s.style.transform = ''; s.style.opacity = '';
+      });
+    });
+  });
+
+  /* ─── SCROLL REVEAL ───────────────────────────────────────────────── */
+  const revealEls = document.querySelectorAll('.reveal');
+  const revealObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+  revealEls.forEach(function(el) { revealObserver.observe(el); });
+
+  /* ─── NUMBER COUNTERS ─────────────────────────────────────────────── */
+  function animateCounter(el) {
+    const targetAttr = el.getAttribute('data-target');
+    const suffix     = el.getAttribute('data-suffix') || '';
+
+    // Special cases (non-numeric)
+    if (!targetAttr || targetAttr === '$0') return;
+
+    const isDecimal = targetAttr.includes('.');
+    const target    = parseFloat(targetAttr);
+    const duration  = 1800;
+    const start     = performance.now();
+
+    function tick(now) {
+      const elapsed  = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease out quad
+      const eased    = 1 - Math.pow(1 - progress, 3);
+      const current  = target * eased;
+      el.textContent = (isDecimal ? current.toFixed(1) : Math.round(current)) + suffix;
+      if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  const counterEls = document.querySelectorAll('.num-big[data-target]');
+  const counterObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        animateCounter(entry.target);
+        counterObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.3 });
+  counterEls.forEach(function(el) { counterObserver.observe(el); });
+
+  /* ─── FAQ ACCORDION ───────────────────────────────────────────────── */
+  document.querySelectorAll('.faq-q').forEach(function(q) {
+    q.addEventListener('click', function() {
+      const item = q.parentElement;
+      const isOpen = item.classList.contains('open');
+      // Close all
+      document.querySelectorAll('.faq-item').forEach(function(i) { i.classList.remove('open'); });
+      // Toggle clicked
+      if (!isOpen) item.classList.add('open');
+    });
+  });
+
+  /* ─── STICKY HEADER SHADOW ────────────────────────────────────────── */
+  window.addEventListener('scroll', function() {
+    const h = document.getElementById('header');
+    if (window.scrollY > 60) {
+      h.style.boxShadow = '0 4px 32px rgba(0,0,0,0.4)';
+    } else {
+      h.style.boxShadow = 'none';
+    }
+  });
+
+  /* ─── CTA EMAIL FORM ──────────────────────────────────────────────── */
+  const ctaForm = document.querySelector('.cta-form');
+  if (ctaForm) {
+    const btn = ctaForm.querySelector('.btn');
+    btn.addEventListener('click', function() {
+      const input = ctaForm.querySelector('.cta-input');
+      const email = input.value.trim();
+      const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailRx.test(email)) {
+        input.style.borderColor = 'var(--red)';
+        input.focus();
+        setTimeout(function() { input.style.borderColor = ''; }, 2000);
+        return;
+      }
+      btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Application Started!';
+      btn.style.background = 'linear-gradient(135deg, var(--green), #009960)';
+      input.value = '';
+      input.placeholder = 'Check your inbox!';
+    });
+  }
+
+})();
+</script>
+
+</body>
+</html>
